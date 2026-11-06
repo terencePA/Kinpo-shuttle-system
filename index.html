@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>接駁車自動驗證系統 (Auto-Load Excel)</title>
+    <title>廠區接駁車自動驗證系統 (1D/QR Barcode Scan)</title>
     <!-- 引入 SheetJS 解析 Excel/CSV -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- 引入 html5-qrcode 支援相機掃條碼/QR Code -->
+    <!-- 引入 html5-qrcode 支援相機掃描一維條碼與 QR Code -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
     <style>
@@ -88,6 +88,7 @@
             cursor: pointer;
             margin-top: 10px;
             transition: opacity 0.2s;
+            width: 100%;
         }
 
         button:hover {
@@ -98,6 +99,8 @@
             width: 100%;
             max-width: 400px;
             margin: 15px auto 0;
+            border-radius: 8px;
+            overflow: hidden;
         }
 
         .result-box {
@@ -166,10 +169,10 @@
     <!-- 步驟 3: 掃描與手動輸入 ID -->
     <div class="section">
         <label for="scanInput">3. 掃描或手動輸入員工 ID</label>
-        <input type="text" id="scanInput" placeholder="刷卡/掃條碼或直接輸入 ID 後按 Enter" autofocus />
+        <input type="text" id="scanInput" placeholder="對準員工證條碼掃描或直接輸入 ID 後按 Enter" autofocus />
         
         <div style="margin-top: 10px;">
-            <button onclick="toggleCamera()">📷 開啟/關閉 鏡頭掃描</button>
+            <button onclick="toggleCamera()">📷 開啟/關閉 一維條碼相機掃描</button>
         </div>
         <div id="reader"></div>
     </div>
@@ -204,7 +207,6 @@
                 
                 const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
                 
-                // 清理欄位與資料空白，增強相容性
                 excelData = rawData.map(row => {
                     let cleanRow = {};
                     for (let key in row) {
@@ -226,13 +228,13 @@
             });
     });
 
-    // 鍵盤手動輸入 / 掃條碼槍 (自動觸發 Enter)
+    // 鍵盤手動輸入 / 條碼槍輸入
     document.getElementById('scanInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             const inputId = this.value.trim();
             if (inputId) {
                 verifyShuttleStop(inputId);
-                this.value = ''; // 清空輸入框準備下一次掃描
+                this.value = '';
             }
         }
     });
@@ -255,7 +257,6 @@
             return;
         }
 
-        // 彈性尋找 ID 欄位
         const matchedUser = excelData.find(item => {
             const idKey = Object.keys(item).find(k => k.toLowerCase().includes('id') || k.includes('工號') || k.includes('員工編號'));
             return idKey && String(item[idKey]).trim().toLowerCase() === String(scannedId).trim().toLowerCase();
@@ -272,13 +273,11 @@
             return;
         }
 
-        // 取得資料內的站點欄位
         const stopKey = Object.keys(matchedUser).find(k => 
             k.toLowerCase().includes('shuttle') || k.toLowerCase().includes('stop') || k.includes('站')
         );
         const userStop = stopKey ? String(matchedUser[stopKey]).trim() : '無紀錄';
 
-        // 比對站點
         if (userStop.toLowerCase() === currentStop.toLowerCase()) {
             resultBox.className = 'result-box pass';
             resultTitle.innerText = '✅ 驗證成功 (MATCH)';
@@ -294,7 +293,7 @@
         }
     }
 
-    // 相機鏡頭掃描開關
+    // 開啟相機（支援一維條碼 CODE_128、CODE_39 等格式）
     function toggleCamera() {
         if (isCameraActive) {
             html5QrcodeScanner.stop().then(() => {
@@ -303,22 +302,33 @@
             });
         } else {
             document.getElementById('reader').style.display = 'block';
-            html5QrcodeScanner = new Html5Qrcode("reader");
+            
+            // 設定支援一維條碼與 QR Code 格式
+            const formatsToSupport = [
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ];
+
+            html5QrcodeScanner = new Html5Qrcode("reader", { formatsToSupport: formatsToSupport });
+            
             html5QrcodeScanner.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
+                { fps: 10, qrbox: { width: 300, height: 150 } }, // 長條狀對應一維條碼
                 (decodedText) => {
+                    document.getElementById('scanInput').value = decodedText;
                     verifyShuttleStop(decodedText);
                 },
                 (errorMessage) => {}
             ).catch(err => {
-                alert("無法開啟鏡頭：" + err);
+                alert("無法開啟鏡頭，請確認是否使用 HTTPS 或外部瀏覽器：" + err);
             });
             isCameraActive = true;
         }
     }
 
-    // 音效提示 (成功/失敗)
+    // 音效提示
     function playAudio(isSuccess) {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();

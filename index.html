@@ -304,7 +304,7 @@
         }
     }
 
-    // 1. 拍照掃描背面一維條碼（帶進度條）
+    // 1. 拍照掃描背面一維條碼（具備逾時保護，絕不卡住）
     function triggerBarcodePhoto() {
         document.getElementById('barcodeInputFile').click();
     }
@@ -316,31 +316,51 @@
             const progressContainer = document.getElementById('progressContainer');
             const progressBar = document.getElementById('progressBar');
 
-            statusDiv.innerText = "⏳ 正在載入並解析背面一維條碼...";
+            statusDiv.innerText = "⏳ 正在解析背面一維條碼...";
             progressContainer.style.display = 'block';
-            progressBar.style.width = '30%';
+            progressBar.style.width = '40%';
 
-            setTimeout(() => { progressBar.style.width = '60%'; }, 200);
+            let isFinished = false;
+
+            // 設定 4 秒安全逾時，避免手機解碼卡死
+            const timeoutId = setTimeout(() => {
+                if (!isFinished) {
+                    isFinished = true;
+                    statusDiv.innerText = "";
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                    alert("條碼解析逾時：請確保背面一維條碼對焦清晰且光線充足！");
+                    input.value = '';
+                }
+            }, 4000);
 
             const html5QrCode = new Html5Qrcode("hidden-reader-div" || createHiddenDiv());
             html5QrCode.scanFile(file, true)
                 .then(decodedText => {
+                    if (isFinished) return;
+                    isFinished = true;
+                    clearTimeout(timeoutId);
+
                     progressBar.style.width = '100%';
                     setTimeout(() => {
                         statusDiv.innerText = "";
                         progressContainer.style.display = 'none';
                         progressBar.style.width = '0%';
-                    }, 400);
+                    }, 300);
 
                     document.getElementById('scanInput').value = decodedText;
                     verifyShuttleStop(decodedText);
                     input.value = '';
                 })
                 .catch(err => {
+                    if (isFinished) return;
+                    isFinished = true;
+                    clearTimeout(timeoutId);
+
                     statusDiv.innerText = "";
                     progressContainer.style.display = 'none';
                     progressBar.style.width = '0%';
-                    alert("無法識別條碼，請確認是否清晰對準背面一維條碼！錯誤訊息：" + err);
+                    alert("無法識別條碼，請確認是否清晰對準背面一維條碼！");
                     input.value = '';
                 });
         }
@@ -354,7 +374,7 @@
         return 'hidden-reader-div';
     }
 
-    // 2. 拍照辨識正面 ID (OCR)（帶進度條）
+    // 2. 拍照辨識正面 ID (OCR)
     function triggerPhotoOCR() {
         document.getElementById('ocrInputFile').click();
     }
@@ -386,7 +406,7 @@
                     statusDiv.innerText = "";
                     progressContainer.style.display = 'none';
                     progressBar.style.width = '0%';
-                }, 400);
+                }, 300);
 
                 const match = text.match(/[A-Z]\d{6}/i);
                 if (match) {
@@ -394,7 +414,7 @@
                     document.getElementById('scanInput').value = detectedId;
                     verifyShuttleStop(detectedId);
                 } else {
-                    alert("未能自動抓取到 ID (例如 C660036)，OCR 辨識出的文字為：\n" + text);
+                    alert("未能自動抓取到 ID，OCR 辨識出的文字為：\n" + text);
                 }
                 input.value = '';
             }).catch(err => {

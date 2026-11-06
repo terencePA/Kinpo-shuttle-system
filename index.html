@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>廠區接駁車自動驗證系統 (Barcode & OCR Scan)</title>
+    <title>廠區接駁車自動驗證系統 (Fast OCR Scan)</title>
     <!-- 1. 引入 SheetJS 解析 Excel/CSV -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- 2. 引入 html5-qrcode 支援圖片條碼解析 -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <!-- 3. 引入 Tesseract.js 支援前端圖片文字辨識 (OCR 抓取正面右下角 ID) -->
+    <!-- 2. 引入 Tesseract.js 支援前端圖片文字辨識 (OCR 快速抓取 ID) -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     
     <style>
@@ -99,6 +97,11 @@
         .btn-ocr {
             background-color: #2196F3;
             color: white;
+        }
+
+        .btn-barcode {
+            background-color: #F5A623;
+            color: #0A192F;
         }
 
         /* 進度條樣式 */
@@ -192,15 +195,15 @@
     <!-- 3. 辨識與輸入區 -->
     <div class="section">
         <label for="scanInput">3. 驗證與辨識員工 ID</label>
-        <input type="text" id="scanInput" placeholder="刷卡、拍照條碼、OCR 辨識或手動輸入 ID" autofocus />
+        <input type="text" id="scanInput" placeholder="刷卡、拍照辨識、手動輸入 ID" autofocus />
         
         <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-            <button onclick="triggerBarcodePhoto()" style="flex: 1; min-width: 140px;">📷 拍照掃描背面一維條碼</button>
+            <button onclick="triggerBarcodeOCR()" class="btn-barcode" style="flex: 1; min-width: 140px;">📷 拍照辨識背面條碼 ID</button>
             <button onclick="triggerPhotoOCR()" class="btn-ocr" style="flex: 1; min-width: 140px;">📸 拍照辨識正面 ID (OCR)</button>
         </div>
         
         <!-- 隱藏的檔案選擇器 -->
-        <input type="file" id="barcodeInputFile" accept="image/*" capture="environment" style="display:none;" onchange="handleBarcodePhoto(this)" />
+        <input type="file" id="barcodeInputFile" accept="image/*" capture="environment" style="display:none;" onchange="handleBarcodeOCR(this)" />
         <input type="file" id="ocrInputFile" accept="image/*" capture="environment" style="display:none;" onchange="handleOCR(this)" />
         
         <!-- 狀態與進度條 -->
@@ -304,84 +307,58 @@
         }
     }
 
-    // 1. 拍照掃描背面一維條碼（優化解碼設定，支援 Code 128 / Code 39）
-    function triggerBarcodePhoto() {
+    // 1. 拍照辨識背面條碼下方文字 (透過 OCR 快速精準抓取)
+    function triggerBarcodeOCR() {
         document.getElementById('barcodeInputFile').click();
     }
 
-    function handleBarcodePhoto(input) {
+    function handleBarcodeOCR(input) {
         if (input.files && input.files[0]) {
             const file = input.files[0];
             const statusDiv = document.getElementById('actionStatus');
             const progressContainer = document.getElementById('progressContainer');
             const progressBar = document.getElementById('progressBar');
 
-            statusDiv.innerText = "⏳ 正在解析背面一維條碼...";
+            statusDiv.innerText = "⏳ 正在辨識背面條碼下方文字...";
             progressContainer.style.display = 'block';
-            progressBar.style.width = '40%';
-
-            let isFinished = false;
-
-            const timeoutId = setTimeout(() => {
-                if (!isFinished) {
-                    isFinished = true;
-                    statusDiv.innerText = "";
-                    progressContainer.style.display = 'none';
-                    progressBar.style.width = '0%';
-                    alert("條碼解析逾時：請確保背面一維條碼清晰且填滿畫面中央！");
-                    input.value = '';
-                }
-            }, 5000);
-
-            // 明確指定支援的一維條碼格式以提升識別速度
-            const config = {
-                formatsToSupport: [
-                    Html5QrcodeSupportedFormats.CODE_128,
-                    Html5QrcodeSupportedFormats.CODE_39,
-                    Html5QrcodeSupportedFormats.EAN_13
-                ]
-            };
-
-            const html5QrCode = new Html5Qrcode("hidden-reader-div" || createHiddenDiv(), config);
+            progressBar.style.width = '20%';
             
-            // 使用較高解析度與預處理配置讀取檔案
-            html5QrCode.scanFile(file, true)
-                .then(decodedText => {
-                    if (isFinished) return;
-                    isFinished = true;
-                    clearTimeout(timeoutId);
-
-                    progressBar.style.width = '100%';
-                    setTimeout(() => {
-                        statusDiv.innerText = "";
-                        progressContainer.style.display = 'none';
-                        progressBar.style.width = '0%';
-                    }, 300);
-
-                    document.getElementById('scanInput').value = decodedText;
-                    verifyShuttleStop(decodedText);
-                    input.value = '';
-                })
-                .catch(err => {
-                    if (isFinished) return;
-                    isFinished = true;
-                    clearTimeout(timeoutId);
-
+            Tesseract.recognize(
+                file,
+                'eng',
+                { logger: m => {
+                    if (m.status === 'recognizing text') {
+                        const percent = Math.round(m.progress * 100);
+                        statusDiv.innerText = `⏳ 解析中... ${percent}%`;
+                        progressBar.style.width = percent + '%';
+                    }
+                }}
+            ).then(({ data: { text } }) => {
+                progressBar.style.width = '100%';
+                setTimeout(() => {
                     statusDiv.innerText = "";
                     progressContainer.style.display = 'none';
                     progressBar.style.width = '0%';
-                    alert("無法識別條碼，請確認是否對準背面一維條碼（例如 C660036 對應的條碼）！");
-                    input.value = '';
-                });
-        }
-    }
+                }, 300);
 
-    function createHiddenDiv() {
-        let div = document.createElement('div');
-        div.id = 'hidden-reader-div';
-        div.style.display = 'none';
-        document.body.appendChild(div);
-        return 'hidden-reader-div';
+                // 搜尋英數字格式 (例如 C660036 或數字 ID)
+                const match = text.match(/[A-Z]\d{6}|\d{3,6}/i);
+                if (match) {
+                    const detectedId = match[0].toUpperCase();
+                    document.getElementById('scanInput').value = detectedId;
+                    verifyShuttleStop(detectedId);
+                } else {
+                    alert("未能自動抓取到 ID，辨識出的文字為：\n" + text);
+                }
+                input.value = '';
+            }).catch(err => {
+                statusDiv.innerText = "";
+                progressContainer.style.display = 'none';
+                progressBar.style.width = '0%';
+                alert("辨識失敗：" + err);
+                input.value = '';
+            });
+        }
     }
 
     // 2. 拍照辨識正面 ID (OCR)
@@ -418,7 +395,7 @@
                     progressBar.style.width = '0%';
                 }, 300);
 
-                const match = text.match(/[A-Z]\d{6}/i);
+                const match = text.match(/[A-Z]\d{6}|\d{3,6}/i);
                 if (match) {
                     const detectedId = match[0].toUpperCase();
                     document.getElementById('scanInput').value = detectedId;

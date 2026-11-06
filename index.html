@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接駁車自動驗證系統 (Auto-Load Excel)</title>
+    <!-- 引入 SheetJS 解析 Excel/CSV -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- 引入 html5-qrcode 支援相機掃條碼/QR Code -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0A192F;
+            --card-bg: #112240;
+            --border-color: #233554;
+            --accent-color: #F5A623;
+            --text-color: #8892B0;
+            --title-color: #FFFFFF;
+            --success-color: #2e7d32;
+            --error-color: #c62828;
+        }
+
+        body {
+            font-family: Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-top: 5px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            color: var(--title-color);
+            margin-top: 0;
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--title-color);
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: #0a192f;
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 10px 18px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 400px;
+            margin: 15px auto 0;
+        }
+
+        .result-box {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+            display: none;
+        }
+
+        .result-box.pass {
+            background-color: rgba(46, 125, 50, 0.2);
+            border: 2px solid var(--success-color);
+            color: #81c784;
+        }
+
+        .result-box.fail {
+            background-color: rgba(198, 40, 40, 0.2);
+            border: 2px solid var(--error-color);
+            color: #ef9a9a;
+        }
+
+        .detail-info {
+            font-size: 16px;
+            margin-top: 8px;
+            font-weight: normal;
+        }
+
+        .status-badge {
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .loaded {
+            background-color: var(--success-color);
+            color: #fff;
+        }
+        .loading {
+            background-color: #f57c00;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚌 廠區接駁車自動驗證系統</h1>
+
+    <!-- 狀態顯示區 -->
+    <div class="section">
+        <label>1. 後端 Excel 資料庫狀態</label>
+        <div id="fileStatus"><span class="status-badge loading">正在自動讀取伺服器內的 test.xlsx...</span></div>
+    </div>
+
+    <!-- 步驟 2: 設定當前站點 -->
+    <div class="section">
+        <label for="currentStop">2. 當前接駁車站點 (Current Shuttle Stop)</label>
+        <input type="text" id="currentStop" placeholder="請輸入當前站點名稱，例如：A / B" />
+    </div>
+
+    <!-- 步驟 3: 掃描與手動輸入 ID -->
+    <div class="section">
+        <label for="scanInput">3. 掃描或手動輸入員工 ID</label>
+        <input type="text" id="scanInput" placeholder="刷卡/掃條碼或直接輸入 ID 後按 Enter" autofocus />
+        
+        <div style="margin-top: 10px;">
+            <button onclick="toggleCamera()">📷 開啟/關閉 鏡頭掃描</button>
+        </div>
+        <div id="reader"></div>
+    </div>
+
+    <!-- 比對結果顯示區 -->
+    <div id="resultBox" class="result-box">
+        <div id="resultTitle"></div>
+        <div id="resultDetail" class="detail-info"></div>
+        <div id="correctStopDisplay" class="detail-info" style="font-weight: bold; color: #ffeb3b; margin-top: 6px;"></div>
+    </div>
+</div>
+
+<script>
+    let excelData = [];
+    let html5QrcodeScanner = null;
+    let isCameraActive = false;
+
+    // 頁面載入時自動從伺服器抓取 test.xlsx
+    window.addEventListener('DOMContentLoaded', function() {
+        fetch('test.xlsx')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("無法取得伺服器上的 test.xlsx 檔案");
+                }
+                return response.arrayBuffer();
+            })
+            .then(buffer => {
+                const data = new Uint8Array(buffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                
+                // 清理欄位與資料空白，增強相容性
+                excelData = rawData.map(row => {
+                    let cleanRow = {};
+                    for (let key in row) {
+                        let cleanKey = key.trim();
+                        let val = row[key];
+                        if (typeof val === 'string') val = val.trim();
+                        cleanRow[cleanKey] = val;
+                    }
+                    return cleanRow;
+                });
+                
+                document.getElementById('fileStatus').innerHTML = 
+                    `<span class="status-badge loaded">已成功自動載入伺服器名單，共 ${excelData.length} 筆資料</span>`;
+            })
+            .catch(error => {
+                console.error(error);
+                document.getElementById('fileStatus').innerHTML = 
+                    `<span class="status-badge" style="background-color:#c62828; color:#fff;">自動載入失敗：請確認 test.xlsx 與網頁在同一個資料夾且伺服器運作中</span>`;
+            });
+    });
+
+    // 鍵盤手動輸入 / 掃條碼槍 (自動觸發 Enter)
+    document.getElementById('scanInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const inputId = this.value.trim();
+            if (inputId) {
+                verifyShuttleStop(inputId);
+                this.value = ''; // 清空輸入框準備下一次掃描
+            }
+        }
+    });
+
+    // 驗證邏輯
+    function verifyShuttleStop(scannedId) {
+        const currentStop = document.getElementById('currentStop').value.trim();
+        const resultBox = document.getElementById('resultBox');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultDetail = document.getElementById('resultDetail');
+        const correctStopDisplay = document.getElementById('correctStopDisplay');
+
+        if (!currentStop) {
+            alert("請先設定當前接駁車站點！");
+            return;
+        }
+
+        if (excelData.length === 0) {
+            alert("名單尚未載入完成或伺服器連線異常！");
+            return;
+        }
+
+        // 彈性尋找 ID 欄位
+        const matchedUser = excelData.find(item => {
+            const idKey = Object.keys(item).find(k => k.toLowerCase().includes('id') || k.includes('工號') || k.includes('員工編號'));
+            return idKey && String(item[idKey]).trim().toLowerCase() === String(scannedId).trim().toLowerCase();
+        });
+
+        resultBox.style.display = 'block';
+
+        if (!matchedUser) {
+            resultBox.className = 'result-box fail';
+            resultTitle.innerText = '❌ 查無此 ID 記錄';
+            resultDetail.innerText = `掃描 ID: ${scannedId}`;
+            correctStopDisplay.innerText = '';
+            playAudio(false);
+            return;
+        }
+
+        // 取得資料內的站點欄位
+        const stopKey = Object.keys(matchedUser).find(k => 
+            k.toLowerCase().includes('shuttle') || k.toLowerCase().includes('stop') || k.includes('站')
+        );
+        const userStop = stopKey ? String(matchedUser[stopKey]).trim() : '無紀錄';
+
+        // 比對站點
+        if (userStop.toLowerCase() === currentStop.toLowerCase()) {
+            resultBox.className = 'result-box pass';
+            resultTitle.innerText = '✅ 驗證成功 (MATCH)';
+            resultDetail.innerText = `員工 ID: ${scannedId}`;
+            correctStopDisplay.innerText = `📍 正確應搭乘站點：${userStop}`;
+            playAudio(true);
+        } else {
+            resultBox.className = 'result-box fail';
+            resultTitle.innerText = '⚠️ 站點不符 (MISMATCH)';
+            resultDetail.innerText = `員工 ID: ${scannedId} | 當前站點: ${currentStop}`;
+            correctStopDisplay.innerText = `📍 該員工登記的正確應搭乘站點：${userStop}`;
+            playAudio(false);
+        }
+    }
+
+    // 相機鏡頭掃描開關
+    function toggleCamera() {
+        if (isCameraActive) {
+            html5QrcodeScanner.stop().then(() => {
+                isCameraActive = false;
+                document.getElementById('reader').style.display = 'none';
+            });
+        } else {
+            document.getElementById('reader').style.display = 'block';
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    verifyShuttleStop(decodedText);
+                },
+                (errorMessage) => {}
+            ).catch(err => {
+                alert("無法開啟鏡頭：" + err);
+            });
+            isCameraActive = true;
+        }
+    }
+
+    // 音效提示 (成功/失敗)
+    function playAudio(isSuccess) {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.connect(ctx.destination);
+        if (isSuccess) {
+            osc.frequency.setValueAtTime(800, ctx.currentTime);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.15);
+        } else {
+            osc.frequency.setValueAtTime(300, ctx.currentTime);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.3);
+        }
+    }
+</script>
+
+</body>
+</html>

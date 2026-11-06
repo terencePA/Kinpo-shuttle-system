@@ -304,7 +304,7 @@
         }
     }
 
-    // 1. 拍照掃描背面一維條碼（具備逾時保護，絕不卡住）
+    // 1. 拍照掃描背面一維條碼（優化解碼設定，支援 Code 128 / Code 39）
     function triggerBarcodePhoto() {
         document.getElementById('barcodeInputFile').click();
     }
@@ -322,19 +322,29 @@
 
             let isFinished = false;
 
-            // 設定 4 秒安全逾時，避免手機解碼卡死
             const timeoutId = setTimeout(() => {
                 if (!isFinished) {
                     isFinished = true;
                     statusDiv.innerText = "";
                     progressContainer.style.display = 'none';
                     progressBar.style.width = '0%';
-                    alert("條碼解析逾時：請確保背面一維條碼對焦清晰且光線充足！");
+                    alert("條碼解析逾時：請確保背面一維條碼清晰且填滿畫面中央！");
                     input.value = '';
                 }
-            }, 4000);
+            }, 5000);
 
-            const html5QrCode = new Html5Qrcode("hidden-reader-div" || createHiddenDiv());
+            // 明確指定支援的一維條碼格式以提升識別速度
+            const config = {
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.EAN_13
+                ]
+            };
+
+            const html5QrCode = new Html5Qrcode("hidden-reader-div" || createHiddenDiv(), config);
+            
+            // 使用較高解析度與預處理配置讀取檔案
             html5QrCode.scanFile(file, true)
                 .then(decodedText => {
                     if (isFinished) return;
@@ -360,7 +370,7 @@
                     statusDiv.innerText = "";
                     progressContainer.style.display = 'none';
                     progressBar.style.width = '0%';
-                    alert("無法識別條碼，請確認是否清晰對準背面一維條碼！");
+                    alert("無法識別條碼，請確認是否對準背面一維條碼（例如 C660036 對應的條碼）！");
                     input.value = '';
                 });
         }

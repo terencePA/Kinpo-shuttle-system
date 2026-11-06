@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>廠區接駁車自動驗證系統 (1D/QR Barcode Scan)</title>
+    <title>廠區接駁車自動驗證系統 (ID & Barcode Scan)</title>
     <!-- 引入 SheetJS 解析 Excel/CSV -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <!-- 引入 html5-qrcode 支援相機掃描一維條碼與 QR Code -->
@@ -44,6 +44,7 @@
             color: var(--title-color);
             margin-top: 0;
             text-align: center;
+            font-size: 24px;
         }
 
         .section {
@@ -63,7 +64,7 @@
 
         input[type="text"] {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             border-radius: 4px;
             border: 1px solid var(--border-color);
             background: #0a192f;
@@ -81,7 +82,7 @@
             background-color: var(--accent-color);
             color: var(--bg-color);
             border: none;
-            padding: 10px 18px;
+            padding: 12px 18px;
             font-size: 16px;
             font-weight: bold;
             border-radius: 4px;
@@ -97,7 +98,7 @@
 
         #reader {
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
             margin: 15px auto 0;
             border-radius: 8px;
             overflow: hidden;
@@ -163,16 +164,16 @@
     <!-- 步驟 2: 設定當前站點 -->
     <div class="section">
         <label for="currentStop">2. 當前接駁車站點 (Current Shuttle Stop)</label>
-        <input type="text" id="currentStop" placeholder="請輸入當前站點名稱，例如：A / B" />
+        <input type="text" id="currentStop" placeholder="請輸入當前站點名稱，例如：A / B / CE1" />
     </div>
 
-    <!-- 步驟 3: 掃描與手動輸入 ID -->
+    <!-- 步驟 3: 掃描或手動輸入 ID -->
     <div class="section">
         <label for="scanInput">3. 掃描或手動輸入員工 ID</label>
-        <input type="text" id="scanInput" placeholder="對準員工證條碼掃描或直接輸入 ID 後按 Enter" autofocus />
+        <input type="text" id="scanInput" placeholder="刷卡、條碼掃描或直接輸入 ID 後按 Enter" autofocus />
         
         <div style="margin-top: 10px;">
-            <button onclick="toggleCamera()">📷 開啟/關閉 一維條碼相機掃描</button>
+            <button onclick="toggleCamera()">📷 開啟/關閉 相機條碼掃描</button>
         </div>
         <div id="reader"></div>
     </div>
@@ -224,7 +225,7 @@
             .catch(error => {
                 console.error(error);
                 document.getElementById('fileStatus').innerHTML = 
-                    `<span class="status-badge" style="background-color:#c62828; color:#fff;">自動載入失敗：請確認 test.xlsx 與網頁在同一個資料夾且伺服器運作中</span>`;
+                    `<span class="status-badge" style="background-color:#c62828; color:#fff;">自動載入失敗：請確認 test.xlsx 與網頁在同一個資料夾</span>`;
             });
     });
 
@@ -296,14 +297,15 @@
     // 開啟相機（支援一維條碼 CODE_128、CODE_39 等格式）
     function toggleCamera() {
         if (isCameraActive) {
-            html5QrcodeScanner.stop().then(() => {
-                isCameraActive = false;
-                document.getElementById('reader').style.display = 'none';
-            });
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.stop().then(() => {
+                    isCameraActive = false;
+                    document.getElementById('reader').style.display = 'none';
+                }).catch(err => console.error(err));
+            }
         } else {
             document.getElementById('reader').style.display = 'block';
             
-            // 設定支援一維條碼與 QR Code 格式
             const formatsToSupport = [
                 Html5QrcodeSupportedFormats.CODE_128,
                 Html5QrcodeSupportedFormats.CODE_39,
@@ -315,7 +317,7 @@
             
             html5QrcodeScanner.start(
                 { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 300, height: 150 } }, // 長條狀對應一維條碼
+                { fps: 15, qrbox: { width: 320, height: 160 } },
                 (decodedText) => {
                     document.getElementById('scanInput').value = decodedText;
                     verifyShuttleStop(decodedText);
@@ -330,17 +332,21 @@
 
     // 音效提示
     function playAudio(isSuccess) {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        osc.connect(ctx.destination);
-        if (isSuccess) {
-            osc.frequency.setValueAtTime(800, ctx.currentTime);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.15);
-        } else {
-            osc.frequency.setValueAtTime(300, ctx.currentTime);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.3);
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            osc.connect(ctx.destination);
+            if (isSuccess) {
+                osc.frequency.setValueAtTime(800, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            } else {
+                osc.frequency.setValueAtTime(300, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            }
+        } catch(e) {
+            console.log("Audio not supported");
         }
     }
 </script>

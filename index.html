@@ -64,7 +64,7 @@
             font-weight: bold;
         }
 
-        input[type="text"] {
+        input[type="text"], select {
             width: 100%;
             padding: 12px;
             border-radius: 4px;
@@ -75,7 +75,7 @@
             font-size: 16px;
         }
 
-        input[type="text"]:focus {
+        input[type="text"]:focus, select:focus {
             outline: none;
             border-color: var(--accent-color);
         }
@@ -99,6 +99,23 @@
         .btn-ocr {
             background-color: #2196F3;
             color: white;
+        }
+
+        /* 進度條樣式 */
+        .progress-container {
+            width: 100%;
+            background-color: #233554;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 8px;
+            background-color: var(--accent-color);
+            transition: width 0.3s ease;
         }
 
         .result-box {
@@ -152,10 +169,24 @@
         <div id="fileStatus"><span class="status-badge loading">正在自動讀取伺服器內的 test.xlsx...</span></div>
     </div>
 
-    <!-- 2. 設定當前站點 -->
+    <!-- 2. 設定當前站點 (下拉選單) -->
     <div class="section">
         <label for="currentStop">2. 當前接駁車站點 (Current Shuttle Stop)</label>
-        <input type="text" id="currentStop" placeholder="請輸入當前站點名稱，例如：A / B / CE1" />
+        <select id="currentStop">
+            <option value="" disabled selected>-- 請選擇當前接駁車站點 --</option>
+            <option value="SM LIPA">SM LIPA</option>
+            <option value="BANAY-BANAY">BANAY-BANAY</option>
+            <option value="ROB LIMA">ROB LIMA</option>
+            <option value="MALVAR">MALVAR</option>
+            <option value="TANAUAN">TANAUAN</option>
+            <option value="SAMBAT">SAMBAT</option>
+            <option value="SAN PABLO">SAN PABLO</option>
+            <option value="STO. TOMAS">STO. TOMAS</option>
+            <option value="GARCIA">GARCIA</option>
+            <option value="IBAAN/ROSARIO">IBAAN/ROSARIO</option>
+            <option value="CALAMBA">CALAMBA</option>
+            <option value="BATANGAS">BATANGAS</option>
+        </select>
     </div>
 
     <!-- 3. 辨識與輸入區 -->
@@ -168,11 +199,15 @@
             <button onclick="triggerPhotoOCR()" class="btn-ocr" style="flex: 1; min-width: 140px;">📸 拍照辨識正面 ID (OCR)</button>
         </div>
         
-        <!-- 隱藏的檔案選擇器：背面條碼拍照與正面 OCR 拍照 -->
+        <!-- 隱藏的檔案選擇器 -->
         <input type="file" id="barcodeInputFile" accept="image/*" capture="environment" style="display:none;" onchange="handleBarcodePhoto(this)" />
         <input type="file" id="ocrInputFile" accept="image/*" capture="environment" style="display:none;" onchange="handleOCR(this)" />
         
-        <div id="actionStatus" style="text-align: center; margin-top: 10px; font-size: 14px; color: #ffeb3b; font-weight: bold;"></div>
+        <!-- 狀態與進度條 -->
+        <div id="actionStatus" style="text-align: center; margin-top: 12px; font-size: 14px; color: #ffeb3b; font-weight: bold;"></div>
+        <div id="progressContainer" class="progress-container">
+            <div id="progressBar" class="progress-bar"></div>
+        </div>
     </div>
 
     <!-- 比對結果顯示區 -->
@@ -224,10 +259,17 @@
 
     // 站點驗證主邏輯
     function verifyShuttleStop(scannedId) {
-        const currentStop = document.getElementById('currentStop').value.trim();
+        const currentStop = document.getElementById('currentStop').value;
         const resultBox = document.getElementById('resultBox');
-        if (!currentStop) { alert("請先設定當前接駁車站點！"); return; }
-        if (excelData.length === 0) { alert("名單尚未載入完成！"); return; }
+        
+        if (!currentStop) { 
+            alert("請先選擇當前接駁車站點！"); 
+            return; 
+        }
+        if (excelData.length === 0) { 
+            alert("名單尚未載入完成！"); 
+            return; 
+        }
 
         const matchedUser = excelData.find(item => {
             const idKey = Object.keys(item).find(k => k.toLowerCase().includes('id') || k.includes('工號') || k.includes('員工編號'));
@@ -262,7 +304,7 @@
         }
     }
 
-    // 1. 點擊按鈕跳出相機拍照「背面條碼」
+    // 1. 拍照掃描背面一維條碼（帶進度條）
     function triggerBarcodePhoto() {
         document.getElementById('barcodeInputFile').click();
     }
@@ -271,18 +313,33 @@
         if (input.files && input.files[0]) {
             const file = input.files[0];
             const statusDiv = document.getElementById('actionStatus');
-            statusDiv.innerText = "⏳ 正在解析背面一維條碼...";
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+
+            statusDiv.innerText = "⏳ 正在載入並解析背面一維條碼...";
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '30%';
+
+            setTimeout(() => { progressBar.style.width = '60%'; }, 200);
 
             const html5QrCode = new Html5Qrcode("hidden-reader-div" || createHiddenDiv());
             html5QrCode.scanFile(file, true)
                 .then(decodedText => {
-                    statusDiv.innerText = "";
+                    progressBar.style.width = '100%';
+                    setTimeout(() => {
+                        statusDiv.innerText = "";
+                        progressContainer.style.display = 'none';
+                        progressBar.style.width = '0%';
+                    }, 400);
+
                     document.getElementById('scanInput').value = decodedText;
                     verifyShuttleStop(decodedText);
-                    input.value = ''; // 清空以允許重複選取相同檔案
+                    input.value = '';
                 })
                 .catch(err => {
                     statusDiv.innerText = "";
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
                     alert("無法識別條碼，請確認是否清晰對準背面一維條碼！錯誤訊息：" + err);
                     input.value = '';
                 });
@@ -297,7 +354,7 @@
         return 'hidden-reader-div';
     }
 
-    // 2. 點擊按鈕跳出相機拍照「正面 ID (OCR)」
+    // 2. 拍照辨識正面 ID (OCR)（帶進度條）
     function triggerPhotoOCR() {
         document.getElementById('ocrInputFile').click();
     }
@@ -306,18 +363,31 @@
         if (input.files && input.files[0]) {
             const file = input.files[0];
             const statusDiv = document.getElementById('actionStatus');
-            statusDiv.innerText = "⏳ 正在使用 OCR 辨識正面 ID...";
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+
+            statusDiv.innerText = "⏳ 正在初始化 OCR 引擎...";
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '10%';
             
             Tesseract.recognize(
                 file,
                 'eng',
                 { logger: m => {
                     if (m.status === 'recognizing text') {
-                        statusDiv.innerText = `⏳ 文字辨識中... ${Math.round(m.progress * 100)}%`;
+                        const percent = Math.round(m.progress * 100);
+                        statusDiv.innerText = `⏳ 文字辨識中... ${percent}%`;
+                        progressBar.style.width = percent + '%';
                     }
                 }}
             ).then(({ data: { text } }) => {
-                statusDiv.innerText = "";
+                progressBar.style.width = '100%';
+                setTimeout(() => {
+                    statusDiv.innerText = "";
+                    progressContainer.style.display = 'none';
+                    progressBar.style.width = '0%';
+                }, 400);
+
                 const match = text.match(/[A-Z]\d{6}/i);
                 if (match) {
                     const detectedId = match[0].toUpperCase();
@@ -329,6 +399,8 @@
                 input.value = '';
             }).catch(err => {
                 statusDiv.innerText = "";
+                progressContainer.style.display = 'none';
+                progressBar.style.width = '0%';
                 alert("OCR 辨識失敗：" + err);
                 input.value = '';
             });

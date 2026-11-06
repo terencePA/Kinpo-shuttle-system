@@ -214,8 +214,13 @@
                     progressBar.style.width = '0%';
                 }, 300);
 
-                // 更具包容性的正則表達式：支援 C660036 或純數字 101~200
-                const cleanedText = text.replace(/\s+/g, '');
+                let cleanedText = text.replace(/\s+/g, '');
+                
+                // 自動修正常見 OCR 誤判：把開頭的 I 修正為 C (例如 I660036 -> C660036)
+                if (/^I\d{6}/i.test(cleanedText)) {
+                    cleanedText = 'C' + cleanedText.substring(1);
+                }
+
                 const match = cleanedText.match(/[A-Z]\d{6}|\d{3,6}/i);
                 
                 if (match) {

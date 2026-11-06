@@ -28,7 +28,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 850px;
             margin: 0 auto;
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -36,30 +36,62 @@
             border-radius: 8px;
             padding: 24px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            position: relative;
         }
 
-        /* 語言切換按鈕樣式 */
-        .lang-switch {
-            position: absolute;
-            top: 24px;
-            right: 24px;
-            background: #233554;
+        /* 雙語文字排版樣式 */
+        .bi-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .zh { font-size: 16px; color: var(--title-color); font-weight: bold; }
+        .en { font-size: 13px; color: var(--text-color); font-weight: normal; }
+
+        h1 {
+            text-align: center;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        h1 .zh { font-size: 24px; }
+        h1 .en { font-size: 16px; }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        label {
+            margin-bottom: 8px;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: #0a192f;
             color: #fff;
-            border: 1px solid var(--accent-color);
-            padding: 6px 12px;
+            box-sizing: border-box;
+            font-size: 16px;
+            margin-top: 6px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 12px 18px;
+            font-size: 16px;
+            font-weight: bold;
             border-radius: 4px;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 14px;
+            margin-top: 10px;
+            width: 100%;
         }
-        .lang-switch:hover { background: var(--accent-color); color: var(--bg-color); }
-
-        h1 { color: var(--title-color); margin-top: 0; text-align: center; font-size: 22px; padding-right: 70px; }
-        .section { margin-bottom: 20px; padding: 15px; background: rgba(255, 255, 255, 0.03); border-radius: 6px; border: 1px solid var(--border-color); }
-        label { display: block; margin-bottom: 8px; color: var(--title-color); font-weight: bold; }
-        input[type="text"], select { width: 100%; padding: 12px; border-radius: 4px; border: 1px solid var(--border-color); background: #0a192f; color: #fff; box-sizing: border-box; font-size: 16px; }
-        button { background-color: var(--accent-color); color: var(--bg-color); border: none; padding: 12px 18px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; }
         button:hover { opacity: 0.9; }
         .btn-ocr { background-color: #2196F3; color: white; }
 
@@ -78,24 +110,36 @@
 <body>
 
 <div class="container">
-    <!-- 語言切換按鈕 -->
-    <button class="lang-switch" onclick="toggleLanguage()">🌐 EN / 中文</button>
-
-    <h1 data-zh="🚌 廠區接駁車自動驗證系統" data-en="🚌 Shuttle Bus Automatic Verification System">🚌 廠區接駁車自動驗證系統</h1>
+    <!-- 標題雙語 -->
+    <h1>
+        <div class="bi-text">
+            <span class="zh">🚌 廠區接駁車自動驗證系統</span>
+            <span class="en">Shuttle Bus Automatic Verification System</span>
+        </div>
+    </h1>
 
     <!-- 1. 資料庫狀態 -->
     <div class="section">
-        <label data-zh="1. 後端 Excel 資料庫狀態" data-en="1. Backend Excel Database Status">1. 後端 Excel 資料庫狀態</label>
+        <label class="bi-text">
+            <span class="zh">1. 後端 Excel 資料庫狀態</span>
+            <span class="en">1. Backend Excel Database Status</span>
+        </label>
         <div id="fileStatus">
-            <span class="status-badge loading" data-zh="正在自動讀取伺服器內的 test.xlsx..." data-en="Loading test.xlsx from server...">正在自動讀取伺服器內的 test.xlsx...</span>
+            <span class="status-badge loading">
+                <span class="zh">正在自動讀取伺服器內的 test.xlsx...</span><br>
+                <span class="en" style="font-size:12px;">Loading test.xlsx from server...</span>
+            </span>
         </div>
     </div>
 
     <!-- 2. 站點選擇 -->
     <div class="section">
-        <label for="currentStop" data-zh="2. 當前接駁車站點 (Current Shuttle Stop)" data-en="2. Current Shuttle Stop">2. 當前接駁車站點 (Current Shuttle Stop)</label>
+        <label for="currentStop" class="bi-text">
+            <span class="zh">2. 當前接駁車站點</span>
+            <span class="en">2. Current Shuttle Stop</span>
+        </label>
         <select id="currentStop">
-            <option value="" disabled selected data-zh="-- 請選擇當前接駁車站點 --" data-en="-- Select Current Shuttle Stop --">-- 請選擇當前接駁車站點 --</option>
+            <option value="" disabled selected>-- 請選擇站點 / Select Shuttle Stop --</option>
             <option value="SM LIPA">SM LIPA</option>
             <option value="BANAY-BANAY">BANAY-BANAY</option>
             <option value="ROB LIMA">ROB LIMA</option>
@@ -113,11 +157,17 @@
 
     <!-- 3. 驗證與辨識 -->
     <div class="section">
-        <label for="scanInput" data-zh="3. 驗證與辨識員工 ID" data-en="3. Verify & Identify Employee ID">3. 驗證與辨識員工 ID</label>
-        <input type="text" id="scanInput" data-zh-placeholder="刷卡、軟體辨識、手動輸入 ID" data-en-placeholder="Swipe card, OCR scan, or manual ID input" placeholder="刷卡、軟體辨識、手動輸入 ID" autofocus />
+        <label for="scanInput" class="bi-text">
+            <span class="zh">3. 驗證與辨識員工 ID</span>
+            <span class="en">3. Verify & Identify Employee ID</span>
+        </label>
+        <input type="text" id="scanInput" placeholder="刷卡、軟體辨識、手動輸入 ID / Swipe, OCR, or Manual ID" autofocus />
         
         <div style="margin-top: 10px;">
-            <button onclick="triggerPhotoOCR()" class="btn-ocr" data-zh="📸 智慧軟體影像識別 ID (OCR)" data-en="📸 Smart Software ID OCR Scan">📸 智慧軟體影像識別 ID (OCR)</button>
+            <button onclick="triggerPhotoOCR()" class="btn-ocr">
+                <span class="zh">📸 智慧軟體影像識別 ID (OCR)</span><br>
+                <span class="en" style="font-size:12px;">Smart Software ID OCR Scan</span>
+            </button>
         </div>
         
         <input type="file" id="ocrInputFile" accept="image/*" capture="environment" style="display:none;" onchange="handleOCR(this)" />
@@ -138,29 +188,6 @@
 
 <script>
     let excelData = [];
-    let currentLang = 'zh'; // 預設中文
-
-    // 語言切換邏輯
-    function toggleLanguage() {
-        currentLang = currentLang === 'zh' ? 'en' : 'zh';
-        
-        // 切換所有帶 data-zh / data-en 的屬性與文字
-        document.querySelectorAll('[data-zh]').forEach(el => {
-            if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-                el.placeholder = el.getAttribute(`data-${currentLang}-placeholder`);
-            } else {
-                el.innerText = el.getAttribute(`data-${currentLang}`);
-            }
-        });
-
-        // 重新整理動態狀態訊息
-        if (excelData.length > 0) {
-            const statusBadge = document.getElementById('fileStatus').querySelector('.status-badge');
-            statusBadge.innerText = currentLang === 'zh' ? 
-                `已成功自動載入伺服器名單，共 ${excelData.length} 筆資料` : 
-                `Successfully loaded server list, total ${excelData.length} records`;
-        }
-    }
 
     window.addEventListener('DOMContentLoaded', function() {
         fetch('test.xlsx')
@@ -176,14 +203,18 @@
                     }
                     return cleanRow;
                 });
-                const msg = currentLang === 'zh' ? 
-                    `已成功自動載入伺服器名單，共 ${excelData.length} 筆資料` : 
-                    `Successfully loaded server list, total ${excelData.length} records`;
-                document.getElementById('fileStatus').innerHTML = `<span class="status-badge loaded">${msg}</span>`;
+                document.getElementById('fileStatus').innerHTML = `
+                    <span class="status-badge loaded">
+                        <span class="zh">已成功自動載入伺服器名單，共 ${excelData.length} 筆資料</span><br>
+                        <span class="en" style="font-size:12px;">Loaded successfully, total ${excelData.length} records</span>
+                    </span>`;
             })
             .catch(err => {
-                const errSql = currentLang === 'zh' ? '自動載入失敗' : 'Auto-load failed';
-                document.getElementById('fileStatus').innerHTML = `<span class="status-badge" style="background-color:#c62828; color:#fff;">${errSql}</span>`;
+                document.getElementById('fileStatus').innerHTML = `
+                    <span class="status-badge" style="background-color:#c62828; color:#fff;">
+                        <span class="zh">自動載入失敗</span><br>
+                        <span class="en" style="font-size:12px;">Auto-load failed</span>
+                    </span>`;
             });
     });
 
@@ -199,11 +230,11 @@
         const resultBox = document.getElementById('resultBox');
         
         if (!currentStop) { 
-            alert(currentLang === 'zh' ? "請先選擇當前接駁車站點！" : "Please select current shuttle stop first!"); 
+            alert("請先選擇當前接駁車站點！\nPlease select current shuttle stop first!"); 
             return; 
         }
         if (excelData.length === 0) { 
-            alert(currentLang === 'zh' ? "名單尚未載入完成！" : "Database is still loading!"); 
+            alert("名單尚未載入完成！\nDatabase is still loading!"); 
             return; 
         }
 
@@ -215,10 +246,10 @@
         resultBox.style.display = 'block';
         if (!matchedUser) {
             resultBox.className = 'result-box fail';
-            document.getElementById('resultTitle').innerText = currentLang === 'zh' ? '❌ 查無此 ID 記錄' : '❌ ID Not Found';
-            document.getElementById('resultDetail').innerText = currentLang === 'zh' ? 
-                `辨識 ID: ${scannedId} (不在 Excel 名單中)` : 
-                `Scanned ID: ${scannedId} (Not in database)`;
+            document.getElementById('resultTitle').innerHTML = `
+                <div>❌ 查無此 ID 記錄</div>
+                <div style="font-size:14px; font-weight:normal;">ID Not Found in Database</div>`;
+            document.getElementById('resultDetail').innerText = `ID: ${scannedId}`;
             document.getElementById('correctStopDisplay').innerText = '';
             playAudio(false);
             return;
@@ -229,21 +260,23 @@
 
         if (userStop.toLowerCase() === currentStop.toLowerCase()) {
             resultBox.className = 'result-box pass';
-            document.getElementById('resultTitle').innerText = currentLang === 'zh' ? '✅ 驗證成功 (MATCH)' : '✅ Verified Successfully (MATCH)';
+            document.getElementById('resultTitle').innerHTML = `
+                <div>✅ 驗證成功 (MATCH)</div>
+                <div style="font-size:14px; font-weight:normal;">Verified Successfully</div>`;
             document.getElementById('resultDetail').innerText = `ID: ${scannedId} (${matchedUser.name || ''})`;
-            document.getElementById('correctStopDisplay').innerText = currentLang === 'zh' ? 
-                `📍 正確應搭乘站點：${userStop}` : 
-                `📍 Assigned Shuttle Stop: ${userStop}`;
+            document.getElementById('correctStopDisplay').innerHTML = `
+                <div>📍 正確應搭乘站點：${userStop}</div>
+                <div style="font-size:14px; font-weight:normal;">Assigned Stop: ${userStop}</div>`;
             playAudio(true);
         } else {
             resultBox.className = 'result-box fail';
-            document.getElementById('resultTitle').innerText = currentLang === 'zh' ? '⚠️ 站點不符 (MISMATCH)' : '⚠️ Stop Mismatch (MISMATCH)';
-            document.getElementById('resultDetail').innerText = currentLang === 'zh' ? 
-                `ID: ${scannedId} | 當前站點: ${currentStop}` : 
-                `ID: ${scannedId} | Current Stop: ${currentStop}`;
-            document.getElementById('correctStopDisplay').innerText = currentLang === 'zh' ? 
-                `📍 該員工登記的正確應搭乘站點：${userStop}` : 
-                `📍 Registered Shuttle Stop: ${userStop}`;
+            document.getElementById('resultTitle').innerHTML = `
+                <div>⚠️ 站點不符 (MISMATCH)</div>
+                <div style="font-size:14px; font-weight:normal;">Shuttle Stop Mismatch</div>`;
+            document.getElementById('resultDetail').innerText = `ID: ${scannedId} | 當前 Current: ${currentStop}`;
+            document.getElementById('correctStopDisplay').innerHTML = `
+                <div>📍 該員工登記的正確站點：${userStop}</div>
+                <div style="font-size:14px; font-weight:normal;">Registered Stop: ${userStop}</div>`;
             playAudio(false);
         }
     }
@@ -287,12 +320,12 @@
             const progressContainer = document.getElementById('progressContainer');
             const progressBar = document.getElementById('progressBar');
 
-            statusDiv.innerText = currentLang === 'zh' ? "⏳ 軟體影像處理中..." : "⏳ Processing image...";
+            statusDiv.innerHTML = "⏳ 軟體影像處理中... / Processing image...";
             progressContainer.style.display = 'block';
             progressBar.style.width = '20%';
 
             preprocessImage(file, function(processedBlob) {
-                statusDiv.innerText = currentLang === 'zh' ? "⏳ 正在辨識證件 ID..." : "⏳ Recognizing ID...";
+                statusDiv.innerHTML = "⏳ 正在辨識證件 ID... / Recognizing ID...";
                 progressBar.style.width = '40%';
 
                 Tesseract.recognize(
@@ -303,7 +336,7 @@
                         logger: m => {
                             if (m.status === 'recognizing text') {
                                 const percent = Math.round(m.progress * 100);
-                                statusDiv.innerText = currentLang === 'zh' ? `⏳ 軟體辨識中... ${percent}%` : `⏳ Recognizing... ${percent}%`;
+                                statusDiv.innerHTML = `⏳ 軟體辨識中... / Recognizing... ${percent}%`;
                                 progressBar.style.width = percent + '%';
                             }
                         }
@@ -326,14 +359,14 @@
                         document.getElementById('scanInput').value = detectedId;
                         verifyShuttleStop(detectedId);
                     } else {
-                        alert(currentLang === 'zh' ? "未能抓取到 ID，預處理後辨識出的文字為：\n" + text : "Failed to extract ID. Recognized text:\n" + text);
+                        alert("未能抓取到 ID，預處理後辨識出的文字為：\nFailed to extract ID. Recognized text:\n" + text);
                     }
                     input.value = '';
                 }).catch(err => {
                     statusDiv.innerText = "";
                     progressContainer.style.display = 'none';
                     progressBar.style.width = '0%';
-                    alert((currentLang === 'zh' ? "辨識失敗：" : "Recognition failed: ") + err);
+                    alert("辨識失敗 / Recognition failed: " + err);
                     input.value = '';
                 });
             });

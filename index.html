@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>廠區接駁車自動驗證系統 (Fast OCR Scan)</title>
-    <!-- 1. 引入 SheetJS 解析 Excel/CSV -->
+    <title>廠區接駁車自動驗證系統</title>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- 2. 引入 Tesseract.js 支援前端圖片文字辨識 (OCR 快速抓取 ID) -->
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     
     <style>
@@ -40,123 +38,22 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        h1 {
-            color: var(--title-color);
-            margin-top: 0;
-            text-align: center;
-            font-size: 24px;
-        }
-
-        .section {
-            margin-bottom: 20px;
-            padding: 15px;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--title-color);
-            font-weight: bold;
-        }
-
-        input[type="text"], select {
-            width: 100%;
-            padding: 12px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            background: #0a192f;
-            color: #fff;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-
-        input[type="text"]:focus, select:focus {
-            outline: none;
-            border-color: var(--accent-color);
-        }
-
-        button {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-            border: none;
-            padding: 12px 18px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: opacity 0.2s;
-            width: 100%;
-        }
-
+        h1 { color: var(--title-color); margin-top: 0; text-align: center; font-size: 24px; }
+        .section { margin-bottom: 20px; padding: 15px; background: rgba(255, 255, 255, 0.03); border-radius: 6px; border: 1px solid var(--border-color); }
+        label { display: block; margin-bottom: 8px; color: var(--title-color); font-weight: bold; }
+        input[type="text"], select { width: 100%; padding: 12px; border-radius: 4px; border: 1px solid var(--border-color); background: #0a192f; color: #fff; box-sizing: border-box; font-size: 16px; }
+        button { background-color: var(--accent-color); color: var(--bg-color); border: none; padding: 12px 18px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 10px; width: 100%; }
         button:hover { opacity: 0.9; }
+        .btn-ocr { background-color: #2196F3; color: white; }
 
-        .btn-ocr {
-            background-color: #2196F3;
-            color: white;
-        }
+        .progress-container { width: 100%; background-color: #233554; border-radius: 4px; margin-top: 10px; overflow: hidden; display: none; }
+        .progress-bar { width: 0%; height: 8px; background-color: var(--accent-color); transition: width 0.3s ease; }
 
-        .btn-barcode {
-            background-color: #F5A623;
-            color: #0A192F;
-        }
-
-        /* 進度條樣式 */
-        .progress-container {
-            width: 100%;
-            background-color: #233554;
-            border-radius: 4px;
-            margin-top: 10px;
-            overflow: hidden;
-            display: none;
-        }
-
-        .progress-bar {
-            width: 0%;
-            height: 8px;
-            background-color: var(--accent-color);
-            transition: width 0.3s ease;
-        }
-
-        .result-box {
-            text-align: center;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 20px;
-            font-weight: bold;
-            display: none;
-        }
-
-        .result-box.pass {
-            background-color: rgba(46, 125, 50, 0.2);
-            border: 2px solid var(--success-color);
-            color: #81c784;
-        }
-
-        .result-box.fail {
-            background-color: rgba(198, 40, 40, 0.2);
-            border: 2px solid var(--error-color);
-            color: #ef9a9a;
-        }
-
-        .detail-info {
-            font-size: 16px;
-            margin-top: 8px;
-            font-weight: normal;
-        }
-
-        .status-badge {
-            font-size: 14px;
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: inline-block;
-            margin-top: 5px;
-        }
-
+        .result-box { text-align: center; padding: 20px; border-radius: 8px; margin-top: 20px; font-size: 20px; font-weight: bold; display: none; }
+        .result-box.pass { background-color: rgba(46, 125, 50, 0.2); border: 2px solid var(--success-color); color: #81c784; }
+        .result-box.fail { background-color: rgba(198, 40, 40, 0.2); border: 2px solid var(--error-color); color: #ef9a9a; }
+        .detail-info { font-size: 16px; margin-top: 8px; font-weight: normal; }
+        .status-badge { font-size: 14px; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 5px; }
         .loaded { background-color: var(--success-color); color: #fff; }
         .loading { background-color: #f57c00; color: #fff; }
     </style>
@@ -166,13 +63,11 @@
 <div class="container">
     <h1>🚌 廠區接駁車自動驗證系統</h1>
 
-    <!-- 1. 後端 Excel 資料庫狀態 -->
     <div class="section">
         <label>1. 後端 Excel 資料庫狀態</label>
         <div id="fileStatus"><span class="status-badge loading">正在自動讀取伺服器內的 test.xlsx...</span></div>
     </div>
 
-    <!-- 2. 設定當前站點 (下拉選單) -->
     <div class="section">
         <label for="currentStop">2. 當前接駁車站點 (Current Shuttle Stop)</label>
         <select id="currentStop">
@@ -192,28 +87,22 @@
         </select>
     </div>
 
-    <!-- 3. 辨識與輸入區 -->
     <div class="section">
         <label for="scanInput">3. 驗證與辨識員工 ID</label>
         <input type="text" id="scanInput" placeholder="刷卡、拍照辨識、手動輸入 ID" autofocus />
         
-        <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-            <button onclick="triggerBarcodeOCR()" class="btn-barcode" style="flex: 1; min-width: 140px;">📷 拍照辨識背面條碼 ID</button>
-            <button onclick="triggerPhotoOCR()" class="btn-ocr" style="flex: 1; min-width: 140px;">📸 拍照辨識正面 ID (OCR)</button>
+        <div style="margin-top: 10px;">
+            <button onclick="triggerPhotoOCR()" class="btn-ocr">📸 拍照辨識證件 ID (OCR)</button>
         </div>
         
-        <!-- 隱藏的檔案選擇器 -->
-        <input type="file" id="barcodeInputFile" accept="image/*" capture="environment" style="display:none;" onchange="handleBarcodeOCR(this)" />
         <input type="file" id="ocrInputFile" accept="image/*" capture="environment" style="display:none;" onchange="handleOCR(this)" />
         
-        <!-- 狀態與進度條 -->
         <div id="actionStatus" style="text-align: center; margin-top: 12px; font-size: 14px; color: #ffeb3b; font-weight: bold;"></div>
         <div id="progressContainer" class="progress-container">
             <div id="progressBar" class="progress-bar"></div>
         </div>
     </div>
 
-    <!-- 比對結果顯示區 -->
     <div id="resultBox" class="result-box">
         <div id="resultTitle"></div>
         <div id="resultDetail" class="detail-info"></div>
@@ -224,13 +113,9 @@
 <script>
     let excelData = [];
 
-    // 頁面載入時自動從伺服器抓取 test.xlsx
     window.addEventListener('DOMContentLoaded', function() {
         fetch('test.xlsx')
-            .then(res => {
-                if (!res.ok) throw new Error("無法取得伺服器上的 test.xlsx");
-                return res.arrayBuffer();
-            })
+            .then(res => res.arrayBuffer())
             .then(buffer => {
                 const workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -242,17 +127,13 @@
                     }
                     return cleanRow;
                 });
-                document.getElementById('fileStatus').innerHTML = 
-                    `<span class="status-badge loaded">已成功自動載入伺服器名單，共 ${excelData.length} 筆資料</span>`;
+                document.getElementById('fileStatus').innerHTML = `<span class="status-badge loaded">已成功自動載入伺服器名單，共 ${excelData.length} 筆資料</span>`;
             })
             .catch(err => {
-                console.error(err);
-                document.getElementById('fileStatus').innerHTML = 
-                    `<span class="status-badge" style="background-color:#c62828; color:#fff;">自動載入失敗，請確認 test.xlsx 與網頁在同資料夾</span>`;
+                document.getElementById('fileStatus').innerHTML = `<span class="status-badge" style="background-color:#c62828; color:#fff;">自動載入失敗</span>`;
             });
     });
 
-    // 手動 Enter 輸入
     document.getElementById('scanInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && this.value.trim()) {
             verifyShuttleStop(this.value.trim());
@@ -260,19 +141,12 @@
         }
     });
 
-    // 站點驗證主邏輯
     function verifyShuttleStop(scannedId) {
         const currentStop = document.getElementById('currentStop').value;
         const resultBox = document.getElementById('resultBox');
         
-        if (!currentStop) { 
-            alert("請先選擇當前接駁車站點！"); 
-            return; 
-        }
-        if (excelData.length === 0) { 
-            alert("名單尚未載入完成！"); 
-            return; 
-        }
+        if (!currentStop) { alert("請先選擇當前接駁車站點！"); return; }
+        if (excelData.length === 0) { alert("名單尚未載入完成！"); return; }
 
         const matchedUser = excelData.find(item => {
             const idKey = Object.keys(item).find(k => k.toLowerCase().includes('id') || k.includes('工號') || k.includes('員工編號'));
@@ -283,7 +157,7 @@
         if (!matchedUser) {
             resultBox.className = 'result-box fail';
             document.getElementById('resultTitle').innerText = '❌ 查無此 ID 記錄';
-            document.getElementById('resultDetail').innerText = `掃描/辨識 ID: ${scannedId}`;
+            document.getElementById('resultDetail').innerText = `辨識 ID: ${scannedId} (不在 Excel 名單中)`;
             document.getElementById('correctStopDisplay').innerText = '';
             playAudio(false);
             return;
@@ -295,7 +169,7 @@
         if (userStop.toLowerCase() === currentStop.toLowerCase()) {
             resultBox.className = 'result-box pass';
             document.getElementById('resultTitle').innerText = '✅ 驗證成功 (MATCH)';
-            document.getElementById('resultDetail').innerText = `員工 ID: ${scannedId}`;
+            document.getElementById('resultDetail').innerText = `員工 ID: ${scannedId} (${matchedUser.name || ''})`;
             document.getElementById('correctStopDisplay').innerText = `📍 正確應搭乘站點：${userStop}`;
             playAudio(true);
         } else {
@@ -307,19 +181,18 @@
         }
     }
 
-    // 1. 拍照辨識背面條碼下方文字 (透過 OCR 快速精準抓取)
-    function triggerBarcodeOCR() {
-        document.getElementById('barcodeInputFile').click();
+    function triggerPhotoOCR() {
+        document.getElementById('ocrInputFile').click();
     }
 
-    function handleBarcodeOCR(input) {
+    function handleOCR(input) {
         if (input.files && input.files[0]) {
             const file = input.files[0];
             const statusDiv = document.getElementById('actionStatus');
             const progressContainer = document.getElementById('progressContainer');
             const progressBar = document.getElementById('progressBar');
 
-            statusDiv.innerText = "⏳ 正在辨識背面條碼下方文字...";
+            statusDiv.innerText = "⏳ 正在辨識證件 ID...";
             progressContainer.style.display = 'block';
             progressBar.style.width = '20%';
             
@@ -329,7 +202,7 @@
                 { logger: m => {
                     if (m.status === 'recognizing text') {
                         const percent = Math.round(m.progress * 100);
-                        statusDiv.innerText = `⏳ 解析中... ${percent}%`;
+                        statusDiv.innerText = `⏳ 辨識中... ${percent}%`;
                         progressBar.style.width = percent + '%';
                     }
                 }}
@@ -341,14 +214,16 @@
                     progressBar.style.width = '0%';
                 }, 300);
 
-                // 搜尋英數字格式 (例如 C660036 或數字 ID)
-                const match = text.match(/[A-Z]\d{6}|\d{3,6}/i);
+                // 更具包容性的正則表達式：支援 C660036 或純數字 101~200
+                const cleanedText = text.replace(/\s+/g, '');
+                const match = cleanedText.match(/[A-Z]\d{6}|\d{3,6}/i);
+                
                 if (match) {
                     const detectedId = match[0].toUpperCase();
                     document.getElementById('scanInput').value = detectedId;
                     verifyShuttleStop(detectedId);
                 } else {
-                    alert("未能自動抓取到 ID，辨識出的文字為：\n" + text);
+                    alert("未能抓取到 ID，OCR 辨識出的原始文字為：\n" + text);
                 }
                 input.value = '';
             }).catch(err => {
@@ -361,60 +236,6 @@
         }
     }
 
-    // 2. 拍照辨識正面 ID (OCR)
-    function triggerPhotoOCR() {
-        document.getElementById('ocrInputFile').click();
-    }
-
-    function handleOCR(input) {
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            const statusDiv = document.getElementById('actionStatus');
-            const progressContainer = document.getElementById('progressContainer');
-            const progressBar = document.getElementById('progressBar');
-
-            statusDiv.innerText = "⏳ 正在初始化 OCR 引擎...";
-            progressContainer.style.display = 'block';
-            progressBar.style.width = '10%';
-            
-            Tesseract.recognize(
-                file,
-                'eng',
-                { logger: m => {
-                    if (m.status === 'recognizing text') {
-                        const percent = Math.round(m.progress * 100);
-                        statusDiv.innerText = `⏳ 文字辨識中... ${percent}%`;
-                        progressBar.style.width = percent + '%';
-                    }
-                }}
-            ).then(({ data: { text } }) => {
-                progressBar.style.width = '100%';
-                setTimeout(() => {
-                    statusDiv.innerText = "";
-                    progressContainer.style.display = 'none';
-                    progressBar.style.width = '0%';
-                }, 300);
-
-                const match = text.match(/[A-Z]\d{6}|\d{3,6}/i);
-                if (match) {
-                    const detectedId = match[0].toUpperCase();
-                    document.getElementById('scanInput').value = detectedId;
-                    verifyShuttleStop(detectedId);
-                } else {
-                    alert("未能自動抓取到 ID，OCR 辨識出的文字為：\n" + text);
-                }
-                input.value = '';
-            }).catch(err => {
-                statusDiv.innerText = "";
-                progressContainer.style.display = 'none';
-                progressBar.style.width = '0%';
-                alert("OCR 辨識失敗：" + err);
-                input.value = '';
-            });
-        }
-    }
-
-    // 蜂鳴音效提示
     function playAudio(isSuccess) {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
